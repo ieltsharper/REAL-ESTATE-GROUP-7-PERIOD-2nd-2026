@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh Sách Ứng Thửa Tổ 7 - Đợt 2 Năm 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8fafc; }
+        
+        /* Cấu hình để cuộn ngang */
+        .table-responsive {
+            width: 100%;
+            max-height: 70vh;
+            overflow-x: auto;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            position: relative;
+        }
+        
+        /* Bảng HTML */
+        table { 
+            border-collapse: separate; 
+            border-spacing: 0; 
+            min-width: max-content; /* Ép bảng giãn đúng với nội dung, tạo thanh cuộn */
+        }
+        
+        /* Style cho Header */
+        thead th {
+            position: sticky;
+            top: 0;
+            background: #1e293b;
+            color: white;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0.75rem 1rem; 
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        
+        /* Cố định cột Checkbox */
+        th.sticky-col, td.sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            text-align: center;
+        }
+        td.sticky-col { 
+            background-color: #ffffff; 
+            border-right: 2px solid #cbd5e1; 
+        }
+        thead th.sticky-col { 
+            z-index: 12; 
+            border-right: 2px solid #cbd5e1; 
+        }
+        
+        /* Giới hạn độ rộng các cột cố định (ví dụ: Số thứ tự) */
+        .col-stt { width: 100px; min-width: 100px; text-align: center; }
+        
+        th, td { 
+            border-bottom: 1px solid #e2e8f0; 
+            border-right: 1px solid #e2e8f0; 
+            padding: 0.75rem 1rem; 
+            font-size: 0.875rem; 
+            white-space: nowrap; /* Không cho rớt dòng */
+        }
+        th { cursor: pointer; user-select: none; font-weight: 600; letter-spacing: 0.025em; }
+        th:first-child, td:first-child { border-left: 1px solid #e2e8f0; }
+        
+        /* Hiệu ứng màu khi tick chọn */
+        tr.checked-row td { background-color: #d4f4dd !important; }
+        tr:nth-child(even):not(.checked-row) td { background-color: #f1f5f9; }
+        tr:hover:not(.checked-row) td { background-color: #e2e8f0; }
+    </style>
+</head>
+<body class="text-slate-800">
+    <div class="container mx-auto px-4 py-6 max-w-full">
+        <h1 class="text-2xl font-bold text-center mb-6 uppercase text-slate-800">Danh Sách Ứng Thửa Tổ 7 Đợt 2 Năm 2026 - Phường Trung Liệt</h1>
+        
+        
+        <!-- Controls & Progress -->
+        <div class="bg-white p-4 rounded shadow-sm border border-slate-200 mb-6">
+            
+            <!-- Cloud Sync Config -->
+            <div class="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+                <span class="font-bold text-blue-700">☁️ Google Sheets Sync:</span>
+                <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/AKfycbxQqydI6u8Mmi56ugoAO-m_xzKsjZjUQcM2VK32CkU3hrdq3B5SOQ2rdL1yLf_giNih/exec" class="flex-1 px-3 py-1.5 border border-blue-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button onclick="saveConfig()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition-colors">Lưu Link</button>
+                <span id="syncStatus" class="text-sm font-semibold text-blue-600 ml-2"></span>
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                <div class="w-full md:w-1/4">
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm..." class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex flex-wrap gap-2 justify-end">
+                    <select id="statusFilter" class="px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="checked">Đã cập nhật</option>
+                        <option value="unchecked">Chưa cập nhật</option>
+                    </select>
+                    
+                    <button onclick="loadFromCloud()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded font-bold transition-colors shadow-sm flex items-center gap-1 border border-blue-300">
+                        ⬇️ Tải từ Cloud
+                    </button>
+                    <button onclick="saveToCloud()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold transition-colors shadow-sm flex items-center gap-1">
+                        ⬆️ Lưu lên Cloud
+                    </button>
+                    
+                    <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded font-medium transition-colors ml-2">Xuất Excel</button>
+                    <button onclick="exportToCSV()" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded font-medium transition-colors">Xuất CSV</button>
+                </div>
+            </div>
+            
+            <div class="mb-2 flex justify-between items-end">
+                <span id="progressText" class="text-sm font-semibold text-slate-600">Đã hoàn thành: 0 / 0 (0%)</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-3">
+                <div id="progressBar" class="bg-emerald-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+<!-- Data Table -->
+        <div class="rounded shadow-sm mb-8 table-responsive" id="tableContainer">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th class="sticky-col w-12 text-center">Cập nhật</th>
+                        <th class="col-stt" onclick="sortTable(0)">Số TT của Tổ</th>
+                        <th onclick="sortTable(1)">Họ và tên chủ sử dụng/Người đại diện</th><th onclick="sortTable(2)">Ngày, tháng, năm sinh</th><th onclick="sortTable(3)">Giới tính</th><th onclick="sortTable(4)">Số định danh cá nhân/CCCD</th><th onclick="sortTable(5)">Địa chỉ thường trú</th><th onclick="sortTable(6)">Pháp nhân trên GCN</th><th onclick="sortTable(7)">Vai trò pháp nhân trên GCN</th><th onclick="sortTable(8)">Số tờ (2 cấp)</th><th onclick="sortTable(9)">Số thửa (2 cấp)</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Issues Section -->
+        <div class="bg-white p-6 rounded shadow-sm border border-slate-200 mb-8">
+            <h2 class="text-xl font-bold mb-4 text-red-600 border-b pb-2">Danh sách thửa đất có vấn đề / Cần xử lý</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <input type="text" id="issueId" placeholder="Số thửa/Số TT..." class="border px-3 py-2 rounded">
+                <input type="text" id="issueDesc" placeholder="Mô tả lỗi..." class="border px-3 py-2 rounded md:col-span-2">
+                <button onclick="addIssue()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium">Thêm Lỗi</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse border border-slate-200" style="min-width: unset; width: 100%;">
+                    <thead class="bg-slate-100 text-slate-700">
+                        <tr>
+                            <th class="border px-4 py-2 text-left" style="color: black; background: #f1f5f9; position: static;">Ngày phát hiện</th>
+                            <th class="border px-4 py-2 text-left" style="color: black; background: #f1f5f9; position: static;">Số thửa / TT</th>
+                            <th class="border px-4 py-2 text-left" style="color: black; background: #f1f5f9; position: static;">Mô tả lỗi</th>
+                            <th class="border px-4 py-2 text-left" style="color: black; background: #f1f5f9; position: static;">Trạng thái</th>
+                            <th class="border px-4 py-2 text-center w-24" style="color: black; background: #f1f5f9; position: static;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="issuesBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const columns = ["S\u1ed1 TT c\u1ee7a T\u1ed5", "H\u1ecd v\u00e0 t\u00ean ch\u1ee7 s\u1eed d\u1ee5ng/Ng\u01b0\u1eddi \u0111\u1ea1i di\u1ec7n", "Ng\u00e0y, th\u00e1ng, n\u0103m sinh", "Gi\u1edbi t\u00ednh", "S\u1ed1 \u0111\u1ecbnh danh c\u00e1 nh\u00e2n/CCCD", "\u0110\u1ecba ch\u1ec9 th\u01b0\u1eddng tr\u00fa", "Ph\u00e1p nh\u00e2n tr\u00ean GCN", "Vai tr\u00f2 ph\u00e1p nh\u00e2n tr\u00ean GCN", "S\u1ed1 t\u1edd (2 c\u1ea5p)", "S\u1ed1 th\u1eeda (2 c\u1ea5p)"];
+        const rawData = [[1, "Phan Ti\u1ebfn D\u0169ng", "05/05/1961", "Nam", 38061004268, "37 Ng\u00f5 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 33, 28], [2, "H\u00e0 Th\u1ecb Thu\u1eadn", "27/11/1974", "N\u1eef", 30174006499, "189 T\u1ed5 8 L\u00e1ng Th\u01b0\u1ee3ng, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 34, 4], [3, "Nguy\u1ec5n H\u1ed3ng Quang", "15/10/1959", "Nam", 1059034263, "63 Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 34, 19], [4, "Ph\u1ea1m M\u1ea1nh H\u00f9ng", "24/08/1977", "Nam", 31077011059, "A7 T\u1ed5 1 Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 11], [5, "Tr\u01b0\u01a1ng V\u0103n Ch\u00e2u", "15/06/1955", "Nam", 3805508606, "17 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 15], [6, "Nguy\u1ec5n Th\u1ecb D\u1ea7n", 1946, "N\u1eef", 11721233, "P2 TT Tr\u01b0\u1eddng H\u1eadu C\u1ea7n CAND, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 12], [7, "L\u00ea Ng\u1ecdc Ki\u00ean", "07/06/1978", "Nam", 1078045662, "25 Ng\u00f5 36 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 19], [8, "Tr\u1ecbnh Th\u1ecb Tuy\u1ebft", "20/09/1962", "N\u1eef", 37162000034, "23 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 26], [9, "Nguy\u1ec5n V\u0103n L\u0103ng", "24/05/1954", "Nam", 1054017239, "9 Ng\u00e1ch 223/24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 35], [10, "L\u00ea Th\u1ecb Mai", "20/06/1960", "N\u1eef", 34150000062, "36 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 45], [11, "Nguy\u1ec5n Th\u1ecb Ng\u00e2n", "25/06/1966", "N\u1eef", 1156000738, "63 T\u1ed5 3Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 42], [12, "H\u00e0 V\u0103n Chung", "15/08/1955", "Nam", 25055004068, "34 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 41], [13, "L\u01b0u Th\u1ecb Lan", "10/10/1958", "N\u1eef", 1158042435, "68B T\u1ed5 3 Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 50, 23], [14, "Nguy\u1ec5n V\u0103n Qu\u1ea3ng", "20/05/1960", "Nam", 30060016537, "65 T\u1ed5 3 Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 22], [15, "Nguy\u1ec5n Vinh Quang", "07/11/1961", "Nam", 1061028768, "8 Ng\u00e1ch 223/24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 50, 31], [16, "Nguy\u1ec5n Th\u1ecb Thanh T\u1ecbnh", "06/07/1947", "N\u1eef", 42147000119, "10 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 50, 7], [17, "Tr\u1ea7n V\u0103n Long", "27/02/19281", "Nam", 8081003980, "40 T\u1ed5 3A Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 63], [18, "\u0110inh V\u0169 B\u00e1ch", "04/01/1975", "Nam", 34075004288, "5 Ng\u00f5 89/2 Th\u00e1i H\u00e0, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 50, 8], [19, "Nguy\u1ec5n H\u1eefu Nga", "20/11/1961", "Nam", 1061010217, "8 \u0110\u1eb7ng Tr\u1ea7n C\u00f4n, Qu\u1ed1c T\u1eed Gi\u00e1m, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 21], [20, "\u0110\u00e0o Tr\u1ecdng Th\u1eafng", "26/01/1970", "Nam", 1070005511, "32 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 3], [21, "Nguy\u1ec5n \u0110\u1ee9c Ho\u00e0n", "06/11/1945", "Nam", 1045008495, "50 Kh\u00e2m Thi\u00ean, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 2], [22, "Ng\u00f4 Th\u1ecb L\u1ee3i", "14/07/1948", "N\u1eef", 1148005335, "6 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 50, 16], [23, "Ph\u1ea1m Th\u1ecb M\u01b0\u1eddi", "03/02/1960", "N\u1eef", 40160000004, "25 T\u1ed5 3 L\u00e1ng H\u1ea1, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 50, 4], [24, "Nguy\u1ec5n V\u0103n Long", "21/09/1959", "Nam", 1059003603, "6 Ng\u00e1ch 249 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 42], [25, "\u0110\u1eb7ng Huy V\u0103n", "24/09/1960", "Nam", 1050003140, "T\u1ed5 1C Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 36], [26, "Nguy\u1ec5n V\u0103n B\u00ecnh", "20/07/1947", "Nam", 1047004675, "7 Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 27], [27, "D\u01b0\u01a1ng Th\u1ecb Th\u00e0nh L\u01b0\u01a1ng", "07/10/1958", "N\u1eef", 1158026857, "10 H\u1ebbm 144/8/19 Quan Nh\u00e2n, Nh\u00e2n Ch\u00ednh, Thanh Xu\u00e2n, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 51, 50], [28, "Nguy\u1ec5n Tu\u1ea5n \u0110\u1ea1t", "20/11/1947", "Nam", 24047000061, "1+3 Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn D\u0169ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 45], [29, "Nguy\u1ec5n C\u00f4ng Quy\u1ebft", "08/03/1962", "Nam", 1062052676, "11 Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn D\u0169ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 33], [30, "Nghi\u00eam Xu\u00e2n Ch\u1ea5n", "31/08/1949", "Nam", 1049002823, "10 Ng\u00e1ch 24/9 \u0110\u1eb7ng Ti\u1ebfn D\u0169ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "\u0110\u1ed3ng s\u1eed d\u1ee5ng", "Th\u00e0nh vi\u00ean", 51, 57], [31, "Ph\u1ea1m Th\u1ecb K\u1ecbch", "05/10/948", "N\u1eef", 33148006477, "8 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 187, 4], [32, "Nguy\u1ec5n V\u0103n Minh", "15/07/1948", "Nam", 40048009732, "4 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 187, 129], [33, "Nguy\u1ec5n Ti\u1ebfn D\u0169ng", "03/12/1960", "Nam", 1060000880, "45 Ng\u00f5 257 Thanh Nh\u00e0n, Thanh Nh\u00e0n, Hai B\u00e0 Tr\u01b0ng, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 60], [34, "B\u00f9i Th\u1ecb B\u00edch H\u1ed3ng", "13/07/1963", "N\u1eef", 1163016509, "227 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 50, 3], [35, "Nguy\u1ec5n Trung M\u00f9i", "13/04/1955", "Nam", 1055011591, "142 Ch\u00f9a B\u1ed9c, Quang Trung, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 33], [36, "L\u00fd Quang Vinh", "16/08/1979", "Nam", 20079000003, "33 Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 3], [37, "Ho\u00e0ng T\u01b0\u1eddng", "16/05/1948", "Nam", 1048005022, "57 Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 34, 10], [38, "L\u00ea Th\u1ecb T\u00e2m", "20/03/1953", "N\u1eef", 36153004017, "114 Th\u00e1i H\u00e0, Trung Li\u1ec7t,\u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 51, 18], [39, "Tr\u1ea7n Th\u1ecb H\u01b0\u01a1ng Quy\u00ean", "18/05/1973", "N\u1eef", 30173000012, "4 T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 33], [40, "Nguy\u1ec5n S\u01a1n H\u00e0", "20/08/1965", "Nam", 10065000010, "28 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 15], [41, "T\u1ea1 V\u0103n Th\u00e0nh", "24/05/1962", "Nam", 1062049245, "T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 7], [42, "V\u0169 \u0110\u00ecnh Ph\u00f9ng", "20/06/1949", "Nam", 1049013815, "7 T\u1ed5 1 Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 21], [43, "V\u0169 \u0110\u00ecnh Ng\u00e1t", "14/02/1954", "Nam", 1054009226, "A7 T\u1ed5 1 Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 6], [44, "Cao Th\u1ecb Thanh Loan", "05/02/1966", "N\u1eef", 1166004722, "65 Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 34, 12], [45, "Tr\u1ea7n Tr\u1ecdng H\u00e0", "29/04/1941", "Nam", 1041007619, "4 T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 33, 23], [46, "Phan Th\u1ecb Di\u1ec7p Anh", "22/02/1982", "N\u1eef", 1182068505, "T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 34, 43], [47, "D\u01b0\u01a1ng Quang Xuy\u1ebfn", "14/04/1967", "Nam", 30057010738, "2 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 50, 13], [48, "V\u0169 Nguy\u00ean", "01/02/1952", "Nam", 24052000113, "32 Th\u1ecd X\u01b0\u01a1ng, H\u00e0ng Tr\u1ed1ng, Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 34], [49, "Ph\u1ea1m H\u1ed3ng S\u01a1n", "21/11/1977", "Nam", 1077007610, "44 T\u1ed5 2 Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 50, 2], [50, "Nguy\u1ec5n Th\u1ecb Ch\u00ednh", "10/10/1957", "Nam", 1157012917, "T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 33, 7], [51, "Cao V\u0103n H\u00f9ng", "15/08/1962", "Nam", 1062048736, "T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 33, 3], [52, "Ho\u00e0ng Th\u1ebf Anh", "20/10/1979", "Nam", 1079022483, "10 Ng\u00e1ch 24/63 \u0110\u1eb7ng Ti\u1ebfn D\u0169ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 34, 5], [53, "B\u00f9i V\u0103n Minh", "19/05/1959", "Nam", 38059003407, "171 Nguy\u1ec5n Tr\u00e3i, Th\u01b0\u1ee3ng \u0110\u00ecnh, Thanh Xu\u00e2n, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 50, 14], [54, "Ti\u00eau Th\u1ecb Thanh Nh\u00e0n", "26/10/1985", "N\u1eef", 22185001824, "2 Ng\u00e1ch 24/9 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 51, 35], [55, "Phan C\u00f4ng Hoan", "04/05/1942", "Nam", 44042000015, "P104 Nh\u00e0 K7 TT Th\u00e0nh C\u00f4ng, Th\u00e0nh C\u00f4ng, Ba \u0110\u00ecnh, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 33, 8], [56, "Phan C\u00f4ng Hoan", "04/05/1942", "Nam", 44042000015, "P104 Nh\u00e0 K7 TT Th\u00e0nh C\u00f4ng, Th\u00e0nh C\u00f4ng, Ba \u0110\u00ecnh, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 33, 8], [57, "Tr\u1ecbnh \u0110\u00ecnh Linh", "05/02/1987", "Nam", 38087011055, "TDP s\u1ed1 6 T\u00e2y M\u1ed7, Nam T\u1eeb Li\u00eam, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 19], [58, "Nguy\u1ec5n Kim Ph\u01b0\u1ee3ng", "05/03/1961", "N\u1eef", 1161011495, "55 Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 34, 26], [59, "B\u00f9i \u0110\u0103ng B\u00ecnh", "04/10/1951", "Nam", 1051006696, "105C Ng\u00f5 173 Ho\u00e0ng Hoa Th\u00e1m, Ng\u1ecdc H\u00e0, Ba \u0110\u00ecnh, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 51, 23], [60, "Ph\u1ea1m Th\u1eafng", "01/03/1964", "Nam", 1064009461, "1 Ng\u00e1ch 223/24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 3], [61, "V\u0169 Th\u1ecb Thu\u00fd Ng\u00e2n", "06/07/1958", "Nam", 31158000712, "22 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 6], [62, "Nguy\u1ec5n Th\u1ecb Tuy\u1ebft Mai", "29/12/1956", "N\u1eef", 1156034763, "7 H\u00e0ng Gi\u1ea5y, \u0110\u1ed3ng Xu\u00e2n, Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 5], [63, "L\u00ea Ti\u1ebfn \u0110\u1ee9c", "13/10/1964", "Nam", 1064017306, "277 Ph\u1ed1 Quan Nh\u00e2n, ph\u01b0\u1eddng Nh\u00e2n Ch\u00ednh, qu\u1eadn Thanh Xu\u00e2n, th\u00e0nh ph\u1ed1 H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 16], [64, "L\u00ea Ti\u1ebfn \u0110\u1ee9c", "13/10/1964", "Nam", 1064017306, "277 Ph\u1ed1 Quan Nh\u00e2n, ph\u01b0\u1eddng Nh\u00e2n Ch\u00ednh, qu\u1eadn Thanh Xu\u00e2n, th\u00e0nh ph\u1ed1 H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 23], [65, "Nguy\u1ec5n Anh V\u00e2n", "22/03/1964", "Nam", 1064000920, "T\u1ed5 11 Th\u01b0\u1ee3ng Thanh, Long Bi\u00ean, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 34, 39], [66, "Nguy\u1ec5n Th\u1ecb Tuy\u1ebft Lan", "03/07/1954", "N\u1eef", 1154003848, "3A Nguy\u1ec5n Kh\u1eafc C\u1ea7n, Tr\u00e0ng Ti\u1ec1n, Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 12], [67, "Nguy\u1ec5n Th\u1ecb Thanh V\u00e2n", "30/07/1964", "N\u1eef", 1164025108, "17 Ng\u00e1ch 76/7 An D\u01b0\u01a1ng, Y\u00ean Ph\u1ee5, T\u00e2y H\u1ed3, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 4], [68, "\u0110\u1eb7ng H\u1ed3ng Th\u00fay", "19/11/1956", "N\u1eef", 1156006760, "14 Ng\u00e1ch 24/9 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 51, 47], [69, "Tr\u1ea7n Th\u1ecb Th\u1ee7y", "28/09/1961", "N\u1eef", 19161000001, "P607 CT9, K\u0110T \u0110\u1ecbnh C\u00f4ng, \u0110\u1ecbnh C\u00f4ng, Ho\u00e0ng Mai, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 39], [70, "Ph\u1ea1m H\u1ed3ng D\u01b0\u01a1ng", "20/05/1971", "Nam", 1071054452, "4 T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 20], [71, "Ph\u1ea1m H\u01b0\u01a1ng Giang", "25/01/1974", "N\u1eef", 1174013222, "4 T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 14], [72, "Ph\u1ea1m Thanh Th\u1ee7y", "22/10/1969", "N\u1eef", 1169040637, "4 T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 17], [73, "\u0110\u00e0o Th\u1ecb B\u00e9", "24/02/1945", "N\u1eef", 20145004260, "4 T\u1ed5 1B Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 198, 19], [74, "Nguy\u1ec5n Th\u1ebf L\u1ee3i", 1950, "Nam", 10227467, "9 T\u1ed5 3 x\u00f3m Thanh H\u00f9ng, ph\u01b0\u1eddng Thanh L\u01b0\u01a1ng, qu\u1eadn Hai B\u00e0 Tr\u01b0ng, th\u00e0nh ph\u1ed1 H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 33, 27], [75, "Nguy\u1ec5n Danh Th\u00f4ng", "09/10/1961", "Nam", 1061032543, "15 Ng\u00e1ch 24/57 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 34, 20], [76, "Tr\u01b0\u01a1ng Xu\u00e2n Duy", "04/11/1968", "Nam", 36068008219, "282 L\u1ea1c Trung, V\u0129nh Tuy, Hai B\u00e0 Tr\u01b0ng, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 13], [77, "Nguy\u1ec5n Ch\u00ed D\u0169ng", "10/07/1964", "Nam", 1064030976, "36 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 9], [78, "Tr\u1ecbnh V\u0169 D\u0169ng", "13/01/1962", "Nam", 1062050724, "5 Ng\u00e1ch 223/24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 11], [79, "Tr\u1ecbnh \u0110\u00ecnh H\u00f9ng", "02/08/1959", "Nam", 1059033654, "3 Ng\u00e1ch 223/24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 7], [80, "Ho\u00e0ng Ng\u1ecdc Thanh", "09/05/1970", "Nam", 1070005543, "7 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 50, 27], [81, "L\u00ea V\u0103n T\u00e0i", "16/09/1959", "Nam", 1059036042, "A7 T\u1ed5 1 Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 5], [82, "Nguy\u1ec5n Vi Kh\u1ea3i", "19/10/1941", "Nam", 279041000091, "D12 T\u1ed5 91 \u00d4 Ch\u1ee3 D\u1eeba, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 34, 3], [83, "Nguy\u1ec5n Th\u1ecb \u00c1nh Nguy\u1ec7t", "10/12/1980", "N\u1eef", 1180035659, "D5 T\u1ed5 9 \u00d4 Ch\u1ee3 D\u1eeba, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 24], [84, "Cao Linh Chi", "", "N\u1eef", 12669273, "S\u1ed1 229 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 50, 6], [85, "Tr\u1ea7n Vi\u1ec7t Ph\u01b0\u01a1ng", "30/01/1977", "Nam", 1077002562, "S\u1ed1 30 Ng\u00f5 91 Nguy\u1ec5n Ch\u00ed Thanh, L\u00e1ng H\u1ea1, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 33, 15], [86, "Nguy\u1ec5n Th\u1ecb Kim Lan", "08/09/1966", "N\u1eef", 1166016169, "25 Ng\u00f5 235 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 50, 21], [87, "Tr\u1ecbnh Th\u1ecb Hu\u1ec7", "03/11/1949", "N\u1eef", 8149000033, "18 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 50, 28], [88, "Cao V\u0103n H\u00f2a", "06/07/1955", "Nam", 1055006540, "7 H\u00e0ng Gi\u1ea5y, \u0110\u1ed3ng Xu\u00e2n, Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 33, 10], [89, "Nguy\u1ec5n Vi\u1ebft H\u1ea3i", "11/09/1957", "Nam", 1057015752, "Ng\u00f5 295 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 50, 21], [90, "Chu Th\u1ecb H\u1ea1nh", "24/07/1982", "N\u1eef", 1182005153, "S\u1ed1 1 ng\u00f5 Th\u1ecb S\u00e1ch, Ph\u1ea1m \u0110\u00ecnh H\u1ed3, Hai B\u00e0 Tr\u01b0ng, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 6], [91, "B\u00f9i V\u0103n Minh", "19/05/1959", "Nam", 38059003407, "171 Nguy\u1ec5n Tr\u00e3i, Th\u01b0\u1ee3ng \u0110\u00ecnh, Thanh Xu\u00e2n, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 50, 11], [92, "Tr\u1ea7n Duy Quy\u1ec1n", "07/09/1959", "Nam", 36059013285, "42 Ng\u00f5 223 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 58], [93, "Nguy\u1ec5n T\u01b0\u1eddng Phan", "17/08/1978", "Nam", 1078008054, "6 Tr\u1ecbnh Ho\u00e0i \u0110\u1ee9c, C\u00e1t Linh, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 50, 26], [94, "Tr\u1ea7n Hi\u1ebfu L\u1ec5", "03/02/1952", "Nam", 37052000423, "52 Ph\u01b0\u01a1ng Mai, Ph\u01b0\u01a1ng Mai, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 34, 34], [95, "Ng\u00f4 \u0110\u1ee9c \u0110\u1ec7", 1977, "Nam", "Q00023882", "", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 13], [96, "Ph\u1ea1m Th\u1ecb H\u1ea3i Vinh", "30/09/1973", "Nam", 370173016051, "12 Ng\u00e1ch 102/20 H\u00e0o Nam, \u00d4 Ch\u1ee3 D\u1eeba, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 33, 40], [97, "Luy\u1ec7n Ng\u1ecdc \u0110\u1ea1t", "14/12/1993", "Nam", 10933021084, "252 T\u1ed5 20 Ph\u01b0\u01a1ng Li\u00ean, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 52], [98, "Ki\u1ec1u V\u0103n Thinh", "04/11/1973", "Nam", 1073037968, "57B Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "\u0110\u1ed3ng s\u1eed d\u1ee5ng", "Th\u00e0nh vi\u00ean", 34, 28], [99, "Nh\u1eef Th\u1ecb \u0110i\u1ec3m", "12/09/1951", "Nam", 35151000822, "57 Ng\u00f5 24 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, Trung Li\u1ec7t, \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "\u0110\u1ed3ng s\u1eed d\u1ee5ng", "Th\u00e0nh vi\u00ean", 34, 28], [100, "Nguy\u1ec5n Tr\u01b0\u1eddng S\u01a1n", "31/08/1963", "Nam", 1063032442, "P508 Nh\u00e0 5T1 TT Kh\u00ed t\u01b0\u1ee3ng, ph\u01b0\u1eddng L\u00e1ng Th\u01b0\u1ee3ng, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 71, 9], [101, "Nguy\u1ec5n Minh S\u01a1n", "19/05/1961", "Nam", 1061002530, "209 T\u1ed5 1B \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 13], [102, "B\u00f9i Xu\u00e2n Nam", "05/11/1976", "Nam", 14076000031, "4 Ng\u00e1ch 78/39 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 59], [103, "L\u00ea \u0110\u00ecnh Ph\u01b0\u01a1ng", "18/08/1944", "Nam", 30044000040, "2 Ng\u00f5 198 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 139], [104, "Nguy\u1ec5n Tr\u1ecdng C\u01b0\u1eddng", "10/08/1955", "Nam", 1055017810, "86 C\u1eeda B\u1eafc, ph\u01b0\u1eddng Qu\u00e1n Th\u00e1nh, qu\u1eadn Ba \u0110\u00ecnh, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 119], [105, "Chu V\u0103n S\u01a1n", "29/09/1948", "Nam", 10848012629, "11 Ng\u00e1ch 178/39 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 66], [106, "Phan Qu\u1ed1c Th\u1eafng", "24/08/1974", "Nam", 1074002221, "11 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 68], [107, "Nguy\u1ec5n \u0110\u1ee9c B\u00ecnh", "02/09/1955", "Nam", 1055009063, "720 \u0110\u01b0\u1eddng La Th\u00e0nh, ph\u01b0\u1eddng Gi\u1ea3ng V\u00f5, qu\u1eadn Ba \u0110\u00ecnh, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 118], [108, "Cao V\u0103n Ph\u00fa", "01/04/1940", "Nam", 1040010789, "178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 44], [109, "Nguy\u1ec5n Th\u1ecb Ch\u00ednh", "12/06/1957", "N\u1eef", 1157027833, "11 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 95, 50], [110, "Tr\u1ea7n Th\u1ecb Kim Ph\u01b0\u01a1ng", "22/09/1956", "N\u1eef", 1156000469, "8 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 95, 23], [111, "Nguy\u1ec5n V\u0103n T\u00e2n", "13/12/1971", "N\u1eef", 1071005143, "188 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 36], [112, "T\u0103ng Th\u1ecb Tr\u1ef1c", "02/09/1934", "N\u1eef", 8134002440, "4 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 95, 14], [113, "\u0110inh V\u0103n Ph\u01b0\u1edbc", "23/11/1944", "Nam", 46044000018, "5 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 15], [114, "Nguy\u1ec5n Th\u1ecb B\u00edch Nga", "27/12/1951", "N\u1eef", 22151004242, "31 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 95, 9], [115, "Nguy\u1ec5n Ph\u01b0\u1edbc To\u00e0n", "31/03/1952", "Nam", 48052004544, "P301 A1 TT H\u00e0o Nam, ph\u01b0\u1eddng \u00d4 Ch\u1ee3 D\u1eeba, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 100], [116, "T\u00f4 Quang H\u00f9ng", "30/05/1961", "Nam", 1061030165, "5 Ng\u00e1ch 1778/39 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 86], [117, "Ng\u00f4 Kim Chi", 1962, "N\u1eef", 1162018353, "C\u0103n h\u1ed9 chung c\u01b0 s\u1ed1 715 t\u00f2a nh\u00e0 D2 Gi\u1ea3ng V\u00f5, ph\u01b0\u1eddng Gi\u1ea3ng V\u00f5, qu\u1eadn Ba \u0110\u00ecnh, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 129], [118, "\u0110\u1eb7ng Minh H\u1ea3i", "18/08/1973", "N\u1eef", 1173000449, "199 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 29], [119, "N\u00f4ng Th\u1ecb H\u1ed3ng H\u1ea1nh", "23/01/1976", "N\u1eef", 1476001173, "6 H\u1ebbm 183/4/1 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 29], [120, "Nguy\u1ec5n Th\u1ecb V\u0103n", "", "N\u1eef", "", "", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 80], [121, "\u0110o\u00e0n V\u0103n Ti\u1ebfn", "21/11/1952", "Nam", 40052000042, "P7 Nh\u00e0 D, t\u1ed5 2B ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 49], [122, "Ph\u1ea1m Th\u1ecb Tuy\u1ebfn", "26/05/1952", "N\u1eef", 37152001718, "10 H\u1ebbm 183/4/3 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 97], [123, "\u0110\u1ed7 V\u0103n Thanh", 1959, "Nam", 205900007, "Nh\u00e0 D2, t\u1ed5 9 Ho\u00e0ng C\u1ea7u, ph\u01b0\u1eddng \u00d4 Ch\u1ee3 D\u1eeba, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 73], [124, "Nguy\u1ec5n Trung Khang", "27/06/1943", "Nam", 1043002714, "55 \u0110\u01b0\u1eddng Th\u00e0nh C\u1eeda \u0110\u00f4ng, qu\u1eadn Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 88], [125, "Ho\u00e0ng Di\u1ec5m Dung", "13/11/1936", "N\u1eef", 113606306, "5 Ng\u00f5 188/8 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 76], [126, "V\u0169 Th\u1ecb Hi\u1ec1n", "05/10/1958", "N\u1eef", 1158019871, "9 L\u00f4 2 T\u1ed5 101 Ho\u00e0ng C\u1ea7u, ph\u01b0\u1eddng \u00d4 Ch\u1ee3 D\u1eeba, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 111], [127, "Nguy\u1ec5n Ng\u1ecdc Tr\u00ed", "03/03/1956", "Nam", 34056001149, "8 H\u1ebbm 183/4/1 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 98], [128, "Tr\u1ea7n Th\u1ecb H\u1ed3ng V\u00e2n", "", "N\u1eef", "", "", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 105], [129, "L\u00e3 Th\u1ecb H\u00f2a B\u00ecnh", "17/08/1955", "N\u1eef", 1155028931, "6 Ng\u00f5 183 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 114], [130, "Ph\u1ea1m Th\u1ecb Sen", "28/05/1959", "N\u1eef", 31149006651, "2 Ng\u00e1ch 183/4/1 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 102], [131, "D\u01b0\u01a1ng Kh\u00e1nh Ng\u1ecdc", "29/01/1972", "Nam", 19172000236, "18 D\u00e3y D t\u1ed5 3C ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 96], [132, "Nguy\u1ec5n Th\u1ecb H\u1ea3i", "12/04/1960", "N\u1eef", 27160000207, "184 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 95, 43], [133, "Nguy\u1ec5n Th\u00fay Oanh", "02/04/1951", "N\u1eef", 38151013442, "8 Ng\u00f5 185 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 40], [134, "Nguy\u1ec5n Th\u1ecb Mai H\u01b0\u01a1ng", "05/01/1942", "N\u1eef", 19142000020, "38 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 110], [135, "Ph\u1ea1m Ph\u00fa T\u1ee9", "06/12/1958", "Nam", 38058005313, "7 Ng\u00f5 198 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 71, 15], [136, "B\u00f9i \u0110\u00ecnh D\u01b0", "30/01/1942", "Nam", 1042000518, "T\u1ed5 5 ph\u01b0\u1eddng Y\u00ean H\u00f2a, qu\u1eadn C\u1ea7u Gi\u1ea5y, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 94, 6], [137, "D\u01b0\u01a1ng V\u0103n Phi\u00ean", "19/09/1962", "Nam", 30062009296, "73B T\u1ed5 3 ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 71, 7], [138, "L\u01b0\u01a1ng V\u0103n B\u1eafc", "25/01/1959", "Nam", 24059000126, "P405 T10 CT18 \u0110T Vi\u1ec7t H\u01b0ng, ph\u01b0\u1eddng Giang Bi\u00ean, qu\u1eadn Long Bi\u00ean, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 94, 1], [139, "Nguy\u1ec5n Th\u1ecb Th\u1eafng", "25/11/1947", "N\u1eef", 25147000011, "6 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 95, 31], [140, "Nguy\u1ec5n Th\u00e0nh Nam", "04/02/1957", "Nam", 34057002986, "26 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 128], ["141 - \u0110\u1ecbnh danh sai th\u1eeda \u0111\u1ea5t", "L\u00ea H\u1ed3ng Di\u1ec7u", "20/04/1946", "N\u1eef", 25146004529, "12 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 95, 12], [142, "Nguy\u1ec5n Quang Anh", "09/02/1971", "Nam", 1071022698, "14+16 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 12], [143, "Nguy\u1ec5n Quang Anh", "09/02/1971", "Nam", 1071022698, "14+16 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 19], [144, "Nguy\u1ec5n Qu\u00fd Thao", "26/06/1953", "Nam", 1053013726, "8 Ng\u00e1ch 178/40 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 119], [145, "Ch\u00e2u Di\u1ec7u Kim Dung", "28/06/1956", "N\u1eef", 1156002493, "49 Ng\u00f5 198 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 69], [146, "B\u00f9i Xu\u00e2n Huy\u1ec1n", "30/10/1960", "Nam", 30060002530, "2N4-K14 TT Nam \u0110\u1ed3ng, ph\u01b0\u1eddng Nam \u0110\u1ed3ng, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 11], [147, "L\u00ea Th\u1ecb Hi\u1ec1n", "07/07/1949", "N\u1eef", 1149021356, "150B B\u00f9i Th\u1ecb Xu\u00e2n, ph\u01b0\u1eddng Nguy\u1ec5n Du, qu\u1eadn Hai B\u00e0 Tr\u01b0ng, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 97], [148, "Nguy\u1ec5n D\u01b0 Ti\u1ebfn", "16/07/1949", "Nam", 33049005622, "198 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 94, 10], [149, "Tr\u01b0\u01a1ng Th\u1ecb H\u00f2a", "06/06/1960", "N\u1eef", 37160002720, "16 Ng\u00f5 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 134], [150, "Nguy\u1ec5n H\u1eefu Danh", "", "Nam", "", "", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 95, 10], [151, "Tr\u1ecbnh C\u01b0\u1eddng", "04/01/1954", "Nam", 1154006090, "35 Ng\u00f5 32 Ph\u1ea1m Ng\u1ecdc Th\u1ea1ch, ph\u01b0\u1eddng Quang Trung, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 85], [152, "Tr\u1ea7n Th\u1ecb Ng\u1ecdc Anh", "", "N\u1eef", "", "", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 117], [153, "Nguy\u1ec5n V\u0103n Quy\u1ec1n", "16/07/1968", "Nam", 1068016834, "38 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 78], [154, "L\u00ea C\u00f4ng Thu\u1eadn", "03/07/1965", "Nam", 27065003801, "22 Ng\u00f5 61 Ho\u00e0ng C\u1ea7u, ph\u01b0\u1eddng \u00d4 Ch\u1ee3 D\u1eeba, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 108], [155, "V\u0169 Thanh H\u1ea3i", "25/07/1963", "Nam", 1063029374, "P8 A24 Y\u00ean L\u00e3ng, ph\u01b0\u1eddng Th\u1ecbnh Quang, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 123], [156, "Th\u00e1i Thanh S\u01a1n", "20/04/1968", "Nam", 42068016674, "18-C2 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 127], [157, "Ho\u00e0ng Th\u1ecb Th\u01b0\u1ee3c", "03/05/1954", "N\u1eef", 38154003673, "45 Ng\u00e1ch 1 ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 108], [158, "Nguy\u1ec5n \u0110\u0103ng \u0110\u1ec9nh", "12/10/1952", "Nam", 27052000171, "24 Ng\u00f5 178 Th\u00e1i H\u00e0, t\u1ed5 3C ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 47], [159, "Ph\u1ea1m Th\u1ecb Ph\u01b0\u1ee3ng", "12/06/1962", "N\u1eef", 1162006524, "61/1 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 85], [160, "Ph\u1ea1m V\u0103n An", "15/04/1967", "Nam", 37067000031, "50 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 78], [161, "Nguy\u1ec5n Th\u1ecb H\u1ed3ng", "20/06/1958", "N\u1eef", 1158002910, "46 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 72], [162, "Phan Cao Kha", "12/01/1951", "Nam", 1051005555, "4 Ng\u00e1ch 178/40 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 124], [163, "Nguy\u1ec5n Ng\u1ecdc H\u1eadu", "15/10/1953", "Nam", 27053000220, "11 Ng\u00e1ch 178/49 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 28], [164, "Th\u00e1i Thanh S\u01a1n", "20/04/1968", "Nam", 42068016674, "18-C2 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 57], [165, "Tr\u1ea7n Di\u1ec7u Linh", "12/10/1960", "N\u1eef", 24160000254, "36 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 94], [166, "Tr\u1ea7n Th\u1ecb Chi\u1ec1n", "08/10/1952", "N\u1eef", 26152000869, "2 Ng\u00f5 185 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 73, 53], [167, "Ho\u00e0ng Qu\u1ed1c Kh\u00e1nh", "08/09/1969", "Nam", 1069005663, "S\u1ed1 84 ng\u00f5 1 ph\u01b0\u1eddng Gi\u1ea3ng V\u00f5, qu\u1eadn Ba \u0110\u00ecnh, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 107], [168, "Phan Huy Khu\u00ea", 1956, "Nam", 10342186, "S\u1ed1 3C Thi S\u00e1ch, ph\u01b0\u1eddng Ng\u00f4 Th\u00ec Nh\u1eadm, Hai B\u00e0 Tr\u01b0ng", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 112], [169, "Nguy\u1ec5n Ti\u1ebfn D\u0169ng", "12/12/1966", "Nam", 27066009500, "22 H\u00e0ng Gai, ph\u01b0\u1eddng H\u00e0ng Gai, qu\u1eadn Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 116], [170, "\u0110inh Th\u1ecb Minh Thu", "19/19/1969", "N\u1eef", 37169006391, "71 Ph\u01b0\u1eddng Kh\u00e2m Thi\u00ean, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 75], [171, "Ho\u00e0ng Ti\u1ebfn Thu\u1eadn", "15/02/1976", "Nam", 15076004733, "55 \u0110\u01b0\u1eddng Th\u00e0nh C\u1eeda \u0110\u00f4ng, qu\u1eadn Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 137], [172, "Cao V\u0103n C\u01b0\u1eddng", "12/05/1954", "Nam", 1054018765, "67 T\u1ed5 3 ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 74], [173, "Nguy\u1ec5n M\u1ea1nh H\u00f9ng", "21/08/1956", "Nam", 1056017965, "25 Ng\u00f5 198 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 115], [174, "Tr\u1ea7n Minh Ph\u00fac", "25/10/1957", "Nam", 1057001506, "207 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 22], [175, "L\u00ea Minh Thu", "03/03/1958", "N\u1eef", 35158003176, "12 Ng\u00e1ch 178/39 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 62], [176, "Nguy\u1ec5n Th\u1ecb Kim Thanh", "02/09/1962", "N\u1eef", 1162017616, "7/49 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 39], [177, "T\u1ea1 Th\u1ecb Kh\u00e1nh Linh", "24/10/1995", "N\u1eef", 1195014434, "14 Ng\u00e1ch 39 ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 48], [178, "Ho\u00e0ng V\u0103n Th\u1eafm", "13/08/1961", "Nam", 30061000848, "17 Ng\u00e1ch 49 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 24], [179, "Phan Qu\u1ed1c Trung", "16/09/1978", "Nam", 52078019278, "11 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 95, 7], [180, "Tr\u1ea7n Thanh Minh", "12/09/1951", "Nam", 1051000686, "6 Ng\u00e1ch 49/178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 18], [181, "\u0110\u1eb7ng Th\u1ebf D\u00e2n", "01/01/1959", "Nam", 26059000932, "8 Ng\u00e1ch 178/49 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 20], [182, "Tr\u1ea7n Ti\u1ebfn \u0110\u1ea1t", "05/08/1942", "Nam", 24042000031, "45 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 63], [183, "Tr\u1ea7n V\u0103n Sung", "16/06/1948", "Nam", 36048005468, "P9 B7 ph\u01b0\u1eddng Th\u00e0nh C\u00f4ng, qu\u1eadn Ba \u0110\u00ecnh, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 71], [184, "Ph\u1ea1m Th\u1ecb Nhi\u1ec1u", "25/02/1930", "Nam", 35130002335, "3 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 71, 16], [185, "\u0110\u1ed7 V\u0103n H\u1ee3p", "08/09/1957", "Nam", 1057034965, "P313 B1 TT Gi\u1ea3ng V\u00f5, ph\u01b0\u1eddng Gi\u1ea3ng V\u00f5, qu\u1eadn Ba \u0110\u00ecnh, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 38], [186, "D\u01b0\u01a1ng V\u0103n Gi\u1ea3ng", "10/09/1954", "Nam", 1054413887, "44B L\u00ea L\u1ee3i, ph\u01b0\u1eddng Nguy\u1ec5n Tr\u00e3i, qu\u1eadn H\u00e0 \u0110\u00f4ng, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 5], [187, "Nguy\u1ec5n Vi\u1ec7t \u0110\u1ee9c", "21/08/1958", "Nam", 35058008464, "67 T\u1ed5 3 ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 71, 12], [188, "Phan Ch\u00ednh Th\u1ee9c", "19/11/1946", "Nam", 36046004614, "304 K10a ph\u01b0\u1eddng B\u00e1ch Khoa, qu\u1eadn Hai B\u00e0 Tr\u01b0ng, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 71, 11], [189, "\u0110o\u00e0n Anh Tu\u1ea5n", "07/10/1957", "Nam", 4057000024, "T\u1ed5 5 ph\u01b0\u1eddng Y\u00ean H\u00f2a, qu\u1eadn C\u1ea7u Gi\u1ea5y, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 18], [190, "\u0110\u1eb7ng \u0110\u00ecnh T\u00edch", "15/03/1960", "Nam", 2406000048, "47 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 60], [191, "B\u00f9i B\u00edch", 1942, "Nam", 10117284, "46 C2 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 84], [192, "Ph\u1ea1m Nguy\u1ec7t Hoa", 1963, "N\u1eef", 11151701, "38 Tr\u00e0ng Ti\u1ec1n, ph\u01b0\u1eddng Tr\u00e0ng Ti\u1ec1n, qu\u1eadn Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 91], [193, "B\u00f9i B\u00edch", "03/03/1942", "Nam", 1042007713, "39 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 87], [194, "Nguy\u1ec5n Xu\u00e2n Thu", "15/05/1941", "Nam", 1041008370, "41 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 69], [195, "Nguy\u1ec5n H\u1eefu V\u01b0\u1ee3ng", "22/02/1955", "Nam", 1055004637, "7 Ng\u00f5 7 H\u1ed3 Gi\u00e1m, ph\u01b0\u1eddng Qu\u1ed1c T\u1eed Gi\u00e1m, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 49], [196, "\u0110\u1eb7ng Th\u1ecb Thanh Xu\u00e2n", "19/03/1961", "N\u1eef", 1161009841, "149A L\u00ea Du\u1ea7n, ph\u01b0\u1eddng C\u1eeda Nam, qu\u1eadn Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 72, 93], [197, "Nguy\u1ec5n \u0110\u0103ng Vinh", "25/08/1958", "Nam", 30058000059, "541 B\u1ea1ch \u0110\u1eb1ng, ph\u01b0\u1eddng Ch\u01b0\u01a1ng D\u01b0\u01a1ng, qu\u1eadn Ho\u00e0n Ki\u1ebfm, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 72], [198, "Mai Thanh B\u00ecnh", "07/07/1959", "Nam", 1059029382, "219 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 51, 53], [199, "Cao M\u1ea1nh Linh", "23/01/1982", "Nam", 1082035932, "L\u00f4 49 C2 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 200, 28], [200, "Tr\u1ea7n \u0110\u00f4ng Phong", "16/06/1953", "Nam", 25053000381, "7 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 21], [201, "D\u01b0\u01a1ng Th\u1ecb Ho\u00e0ng Ng\u00e2n", 1979, "Nam", 18206724, "Kh\u1ed1i 4, ph\u01b0\u1eddng Nam H\u00e0, th\u00e0nh ph\u1ed1 H\u00e0 T\u0129nh, H\u00e0 T\u0129nh", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 103], [202, "D\u01b0\u01a1ng Th\u1ecb V\u00e2n", "04/01/1958", "N\u1eef", 1158012078, "4 Ng\u00e1ch 183/4 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 93], [203, "Cao Quang \u0110\u1ea1i", "07/01/1958", "Nam", 330588003656, "P506-T2 TT L\u0110TBXH Ph\u01b0\u01a1ng Mai, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 23], [204, "Tr\u1ea7n Th\u1ecb Nga", 1927, "Nam", 10458388, "83 Ph\u1ed1 Hu\u1ebf, qu\u1eadn Hai B\u00e0 Tr\u01b0ng, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 95, 5], [205, "Nguy\u1ec5n Ho\u00e0ng H\u00e0", "26/11/1970", "Nam", 1070003764, "218 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 71, 14], [206, "Ph\u1ea1m \u00dd Nhi", "30/08/1996", "Nam", 1196028911, "P6A8 TT HV TTN VN, ph\u01b0\u1eddng L\u00e1ng Th\u01b0\u1ee3ng, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "\u0110\u1ed3ng s\u1eed d\u1ee5ng", "Th\u00e0nh vi\u00ean", 94, 4], [207, "Nguy\u1ec5n Gia Vi\u1ec7n", "17/06/1958", "Nam", 1058001700, "8 Ng\u00e1ch 39 ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 47], [208, "\u0110\u1eb7ng Th\u1ecb Th\u00eam", "03/06/1952", "N\u1eef", 11520016430, "197 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 35], [209, "L\u00ea Minh S\u01a1n", "17/04/1954", "Nam", 22054000490, "57/178/1 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 92], [210, "L\u00ea Ng\u1ecdc B\u00e1u", "26/05/1945", "Nam", 1045013155, "45 L\u00f2 \u0110\u00fac, ph\u01b0\u1eddng Ph\u1ea1m \u0110\u00ecnh H\u1ed5, qu\u1eadn Hai B\u00e0 Tr\u01b0ng, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 96, 3], [211, "L\u00ea V\u0103n Ti\u1ebfn", "28/06/1958", "Nam", 1058013604, "55 Ng\u00f5 198 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 56], [212, "Nguy\u1ec5n Th\u1ecb B\u00edch V\u00e2n", "21/05/1960", "N\u1eef", 1160034488, "S\u1ed1 30 ng\u00e1ch 27 ng\u00f5 381, N/ Khang, t\u1ed5 7, ph\u01b0\u1eddng Y\u00ean Ho\u00e0, qu\u1eadn C\u1ea7u Gi\u1ea5y, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 38], [213, "Nguy\u1ec5n H\u1ed3ng H\u00e0", "27/02/1958", "Nam", 1058015156, "108 T\u1ed5 14 ph\u01b0\u1eddng Thanh L\u01b0\u01a1ng, qu\u1eadn Hai B\u00e0 Tr\u01b0ng, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 71, 14], [214, "\u0110\u1eadu Th\u1ecb H\u01b0\u1eddng", "05/05/1968", "N\u1eef", 38168000084, "211 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 7], [215, "B\u00f9i Th\u1ecb Thu\u1ef3", "16/07/1973", "Nam", 36173017400, "2+4 Th\u1ecbnh H\u00e0o 1, ph\u01b0\u1eddng H\u00e0ng B\u1ed9t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 95, 1], [216, "Nguy\u1ec5n Thu\u1ef3 Trinh", 1989, "N\u1eef", 12624924, "2 Ph\u1ed1 Ph\u01b0\u01a1ng Li\u1ec7t, ph\u01b0\u1eddng Ph\u01b0\u01a1ng Li\u1ec7t, qu\u1eadn Thanh Xu\u00e2n, th\u00e0nh ph\u1ed1 H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 80], [217, "Ph\u1ea1m V\u0103n L\u01b0u", "20/12/1939", "Nam", 30039002888, "8 Ng\u00e1ch 183/4 ng\u00f5 183 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 85], [218, "Nguy\u1ec5n Th\u1ecb Thu\u1ef3 Chi", "08/09/1976", "N\u1eef", 19176000607, "6/178/40 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 121], [219, "L\u01b0u Lan Ph\u01b0\u01a1ng", "23/05/1963", "N\u1eef", 1163019490, "2 Ng\u00e1ch 183/40 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 117], [220, "Nguy\u1ec5n V\u0103n Th\u1ecd", 1965, "Nam", 11231160, "73 T\u1ed5 4, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "\u0110\u1ed3ng s\u1eed d\u1ee5ng", "Th\u00e0nh vi\u00ean", 94, 2], [221, "Nguy\u1ec5n V\u0103n L\u00fd", 1973, "Nam", 11593491, "73 T\u1ed5 4, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "\u0110\u1ed3ng s\u1eed d\u1ee5ng", "Th\u00e0nh vi\u00ean", 94, 2], [222, "Nguy\u1ec5n V\u0103n Th\u00e0nh", 1977, "Nam", 26077000006, "73 T\u1ed5 4, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "\u0110\u1ed3ng s\u1eed d\u1ee5ng", "Th\u00e0nh vi\u00ean", 94, 2], [223, "Nguy\u1ec5n V\u0103n Chi\u1ebfn", "15/12/1962", "Nam", 1062045779, "76 T\u1ed5 4A, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 49], [224, "Nguy\u1ec5n S\u01a1n H\u1ea3i", 1960, "Nam", 10022096, "116-A1, ph\u01b0\u1eddng Th\u00e0nh C\u00f4ng, qu\u1eadn Ba \u0110\u00ecnh, th\u00e0nh ph\u1ed1 H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "V\u1ee3", 51, 56], [225, "", "", "Nam", "", "S\u1ed1 nh\u00e0 71 ng\u00f5 98, Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "T\u1ed5 ch\u1ee9c", "Ng\u01b0\u1eddi \u0111\u1ea1i di\u1ec7n", 73, 52], [226, "Ho\u00e0ng Th\u1ecb Lai", "27/12/1962", "N\u1eef", 36162002889, "21 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 95, 20], [227, "V\u00f5 V\u0103n N\u0103m", "12/02/1955", "Nam", 36055005348, "67 T\u1ed5 3 ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 71, 10], [228, "\u0110\u1ed7 Th\u1ecb Y\u1ebfn", "23/06/1975", "N\u1eef", 14175010043, "T\u1ed5 1 T\u00f4 Hi\u1ec7u, th\u00e0nh ph\u1ed1 S\u01a1n La, S\u01a1n La", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 61], [229, "\u0110\u00e0o Th\u1ebf Vinh", "21/07/1959", "Nam", 34059003110, "189 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 37], [230, "L\u00ea Tu\u1ea5n Hi\u1ebfn", "03/06/1950", "Nam", 1050003841, "4 Ng\u00f5 198 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 124], [231, "Nguy\u1ec5n Qu\u1ed1c Minh", "19/08/1970", "Nam", 1070010607, "213 \u0110\u1eb7ng Ti\u1ebfn \u0110\u00f4ng, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 2], [232, "B\u00f9i Xu\u00e2n H\u00f9ng", "10/11/1980", "Nam", 17080000956, "12 Ng\u00f5 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "H\u1ed9 gia \u0111\u00ecnh", "Ng\u01b0\u1eddi \u0111\u1ea1i di\u1ec7n", 95, 4], [233, "Ph\u1ea1m Tr\u1ecdng Ho\u1ea1ch", "05/05/1951", "Nam", 31051004891, "T\u1ed5 5, ph\u01b0\u1eddng Ph\u00fa X\u00e1, th\u00e0nh ph\u1ed1 Th\u00e1i Nguy\u00ean, t\u1ec9nh Th\u00e1i Nguy\u00ean", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 71, 17], [234, "Nguy\u1ec5n H\u1eefu Th\u1eafng", "26/03/1957", "Nam", 20057000067, "5 Nh\u00e0 D t\u1ed5 2B ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 61], [235, "Nguy\u1ec5n H\u1ea3i B\u1eb1ng", "12/07/1978", "Nam", 1078043338, "19 Ng\u00f5 178 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 131], [236, "V\u00f5 Tu\u1ea5n Anh", "07/01/1988", "Nam", 42880012927, "35 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 72, 136], [237, "\u0110o\u00e0n V\u0103n V\u1ee3t", "19/05/1975", "Nam", 30075001243, "26 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 107], [238, "Ph\u1ea1m Minh Chi\u1ebfn", "02/09/1947", "Nam", 26047000727, "8 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 18], [239, "Tr\u1ea7n T\u00edch Ti\u1ebfn", "28/12/1955", "Nam", 31055000513, "3 Ng\u00e1ch 178/1 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 95, 38], [240, "Chu H\u1ed3ng V\u00e2n", "18/02/1967", "Nam", 33067002016, "9 Ng\u00f5 198 Th\u00e1i H\u00e0, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 128], [241, "Ph\u1ea1m V\u0103n T\u00e2n", 1972, "Nam", 11746735, "S\u1ed1 nh\u00e0 160 ng\u00f5 Th\u00e1i Th\u1ecbnh 1, ph\u01b0\u1eddng Th\u1ecbnh Quang, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 106], [242, "Nguy\u1ec5n \u0110\u1ee9c Th\u00e0nh", "20/10/1966", "Nam", 36066001444, "388 Tr\u1ea7n H\u01b0ng \u0110\u1ea1o, Quang Trung, Nam \u0110\u1ecbnh", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 95], [243, "V\u0169 Th\u1ecb Mai H\u01b0\u01a1ng", "03/12/1969", "N\u1eef", 1169019300, "7 H\u1ed3 \u0110\u1eafc Di, ph\u01b0\u1eddng Nam \u0110\u1ed3ng, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 95, 25], [244, "Nguy\u1ec5n V\u0103n L\u1ee3i", "20/05/1958", "Nam", 44058000647, "P107-C1C ph\u01b0\u1eddng L\u00e1ng H\u1ea1, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 73, 120], [245, "H\u00e0 Ng\u1ecdc Thu Hi\u1ec1n", "30/11/1991", "N\u1eef", 1191009910, "D13-A2 TT H\u1ecdc vi\u1ec7n Th\u1ee7y L\u1ee3i, ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "C\u00e1 nh\u00e2n", "C\u00e1 nh\u00e2n", 73, 127], [246, "\u0110\u1ed7 \u0110\u0103ng Khoa", "20/09/1965", "Nam", 1065015575, "65 T\u1ed5 3 ph\u01b0\u1eddng Trung Li\u1ec7t, qu\u1eadn \u0110\u1ed1ng \u0110a, H\u00e0 N\u1ed9i", "V\u1ee3 ch\u1ed3ng", "Ch\u1ed3ng", 72, 59]];
+        
+        let tableData = rawData.map((row, index) => ({ id: 'row_' + index, checked: false, data: row }));
+
+        const storageKey = 'land_data_status_v4';
+        const issuesKey = 'land_issues_v4';
+        
+        function loadState() {
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+                const checkedIds = JSON.parse(saved);
+                tableData.forEach(row => { if (checkedIds.includes(row.id)) row.checked = true; });
+            }
+        }
+
+        function saveState() {
+            const checkedIds = tableData.filter(r => r.checked).map(r => r.id);
+            localStorage.setItem(storageKey, JSON.stringify(checkedIds));
+            updateProgress();
+        }
+
+        function renderTable(filterText = '', statusFilter = 'all') {
+            const tbody = document.getElementById('tableBody');
+            filterText = filterText.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+            
+            let html = '';
+            tableData.forEach(row => {
+                if (statusFilter === 'checked' && !row.checked) return;
+                if (statusFilter === 'unchecked' && row.checked) return;
+                
+                let rowText = row.data.map(v => v ? String(v).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") : '').join(' ');
+                if (filterText && !rowText.includes(filterText)) return;
+
+                const trClass = row.checked ? 'checked-row' : '';
+                const cbChecked = row.checked ? 'checked' : '';
+                
+                let cellsHtml = row.data.map((val, idx) => {
+                    let extraClass = (idx === 0) ? ' class="col-stt"' : '';
+                    return `<td${extraClass}>${val !== null && val !== undefined ? val : ''}</td>`
+                }).join('');
+                
+                html += `
+                    <tr class="${trClass}" id="tr_${row.id}">
+                        <td class="sticky-col text-center">
+                            <input type="checkbox" class="w-5 h-5 cursor-pointer" ${cbChecked} onchange="toggleRow('${row.id}', this.checked)">
+                        </td>
+                        ${cellsHtml}
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            updateProgress();
+        }
+
+        function toggleRow(id, isChecked) {
+            const row = tableData.find(r => r.id === id);
+            if (row) {
+                row.checked = isChecked;
+                const tr = document.getElementById('tr_' + id);
+                if (isChecked) tr.classList.add('checked-row');
+                else tr.classList.remove('checked-row');
+                saveState();
+            }
+        }
+
+        function updateProgress() {
+            const total = tableData.length;
+            const checkedCount = tableData.filter(r => r.checked).length;
+            const pct = total === 0 ? 0 : Math.round((checkedCount / total) * 100);
+            document.getElementById('progressText').innerText = `Đã hoàn thành: ${checkedCount} / ${total} (${pct}%)`;
+            document.getElementById('progressBar').style.width = pct + '%';
+        }
+
+        let currentSortCol = -1;
+        let sortAsc = true;
+        function sortTable(colIndex) {
+            if (currentSortCol === colIndex) sortAsc = !sortAsc;
+            else { currentSortCol = colIndex; sortAsc = true; }
+
+            tableData.sort((a, b) => {
+                let valA = a.data[colIndex] || '';
+                let valB = b.data[colIndex] || '';
+                
+                if (!isNaN(valA) && !isNaN(valB) && valA !== '' && valB !== '') {
+                    return sortAsc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+                }
+                
+                valA = String(valA).toLowerCase();
+                valB = String(valB).toLowerCase();
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const searchVal = document.getElementById('searchInput').value;
+            const statusVal = document.getElementById('statusFilter').value;
+            renderTable(searchVal, statusVal);
+        }
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+
+        // Issues Management
+        let issues = [];
+        function loadIssues() {
+            const saved = localStorage.getItem(issuesKey);
+            if (saved) issues = JSON.parse(saved);
+            renderIssues();
+        }
+        function saveIssues() {
+            localStorage.setItem(issuesKey, JSON.stringify(issues));
+            renderIssues();
+        }
+        function addIssue() {
+            const idVal = document.getElementById('issueId').value.trim();
+            const descVal = document.getElementById('issueDesc').value.trim();
+            if (!idVal || !descVal) { alert("Vui lòng nhập đủ thông tin."); return; }
+            issues.push({
+                id: Date.now().toString(),
+                date: new Date().toLocaleDateString('vi-VN'),
+                refId: idVal,
+                desc: descVal,
+                status: 'Chưa xử lý'
+            });
+            document.getElementById('issueId').value = '';
+            document.getElementById('issueDesc').value = '';
+            saveIssues();
+        }
+        function deleteIssue(id) {
+            if (confirm("Xóa mục này?")) {
+                issues = issues.filter(i => i.id !== id);
+                saveIssues();
+            }
+        }
+        function toggleIssueStatus(id) {
+            const issue = issues.find(i => i.id === id);
+            if (issue) {
+                if (issue.status === 'Chưa xử lý') issue.status = 'Đang xử lý';
+                else if (issue.status === 'Đang xử lý') issue.status = 'Đã xử lý';
+                else issue.status = 'Chưa xử lý';
+                saveIssues();
+            }
+        }
+        function renderIssues() {
+            const tbody = document.getElementById('issuesBody');
+            let html = '';
+            issues.forEach(iss => {
+                let statusColor = 'text-red-600 bg-red-100';
+                if (iss.status === 'Đang xử lý') statusColor = 'text-amber-600 bg-amber-100';
+                if (iss.status === 'Đã xử lý') statusColor = 'text-green-600 bg-green-100';
+                
+                html += `
+                    <tr>
+                        <td class="border px-4 py-2">${iss.date}</td>
+                        <td class="border px-4 py-2 font-semibold">${iss.refId}</td>
+                        <td class="border px-4 py-2">${iss.desc}</td>
+                        <td class="border px-4 py-2 cursor-pointer" onclick="toggleIssueStatus('${iss.id}')">
+                            <span class="px-2 py-1 text-xs rounded font-bold ${statusColor}">${iss.status}</span>
+                        </td>
+                        <td class="border px-4 py-2 text-center">
+                            <button onclick="deleteIssue('${iss.id}')" class="text-red-500 hover:text-red-700 font-bold">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            if (issues.length === 0) html = '<tr><td colspan="5" class="border px-4 py-4 text-center text-slate-500">Chưa có dữ liệu lỗi.</td></tr>';
+            tbody.innerHTML = html;
+        }
+
+        
+        // ------------------ CLOUD SYNC LOGIC ------------------
+        function saveConfig() {
+            const url = document.getElementById('scriptUrl').value.trim();
+            localStorage.setItem('gas_script_url', url);
+            alert("Đã lưu Link cấu hình thành công!");
+        }
+
+        function loadConfig() {
+            const url = localStorage.getItem('gas_script_url');
+            if (url) document.getElementById('scriptUrl').value = url;
+        }
+
+        async function saveToCloud() {
+            const url = document.getElementById('scriptUrl').value.trim();
+            if(!url) return alert("Vui lòng dán Link Apps Script vào ô cấu hình và bấm Lưu Link!");
+            
+            const data = {
+                checkedIds: tableData.filter(r => r.checked).map(r => r.id),
+                issues: issues
+            };
+
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.innerText = "⏳ Đang lưu lên Google Sheets...";
+            statusEl.className = "text-sm font-semibold text-amber-600 ml-2";
+
+            try {
+                // Send as text/plain to avoid CORS preflight OPTION blocks in Apps Script
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                if(result.status === 'success') {
+                    statusEl.innerText = "✔️ Đã lưu thành công!";
+                    statusEl.className = "text-sm font-semibold text-emerald-600 ml-2";
+                    setTimeout(() => statusEl.innerText = "", 4000);
+                } else {
+                    throw new Error("Lỗi từ server");
+                }
+            } catch(e) {
+                alert("Lỗi khi kết nối đến Google Sheets. Hãy chắc chắn Link Web App đúng và có quyền truy cập Anyone.");
+                statusEl.innerText = "❌ Lỗi lưu dữ liệu!";
+                statusEl.className = "text-sm font-semibold text-red-600 ml-2";
+            }
+        }
+
+        async function loadFromCloud() {
+            const url = document.getElementById('scriptUrl').value.trim();
+            if(!url) return alert("Vui lòng dán Link Apps Script vào ô cấu hình!");
+
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.innerText = "⏳ Đang tải từ Google Sheets...";
+            statusEl.className = "text-sm font-semibold text-amber-600 ml-2";
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if(data.checkedIds) {
+                    tableData.forEach(row => { row.checked = data.checkedIds.includes(row.id); });
+                    saveState(); // Đồng bộ xuống localStorage
+                }
+                if(data.issues) {
+                    issues = data.issues;
+                    saveIssues(); // Đồng bộ xuống localStorage
+                }
+                
+                renderTable(document.getElementById('searchInput').value, document.getElementById('statusFilter').value);
+                
+                statusEl.innerText = "✔️ Tải dữ liệu thành công!";
+                statusEl.className = "text-sm font-semibold text-blue-600 ml-2";
+                setTimeout(() => statusEl.innerText = "", 4000);
+
+            } catch(e) {
+                alert("Không thể tải dữ liệu. Hãy kiểm tra lại đường link.");
+                statusEl.innerText = "❌ Lỗi tải dữ liệu!";
+                statusEl.className = "text-sm font-semibold text-red-600 ml-2";
+            }
+        }
+        // ------------------------------------------------------
+
+        function getExportData() {
+
+            return tableData.map(row => {
+                let obj = { "Đã cập nhật": row.checked ? "x" : "" };
+                columns.forEach((col, idx) => { obj[col] = row.data[idx]; });
+                return obj;
+            });
+        }
+
+        function exportToExcel() {
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(getExportData()), "Du_Lieu");
+            if (issues.length > 0) {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(issues.map(i => ({
+                    "Ngày phát hiện": i.date, "Số thửa/TT": i.refId, "Mô tả": i.desc, "Trạng thái": i.status
+                }))), "Loi_Can_Xu_Ly");
+            }
+            XLSX.writeFile(wb, "Danh_Sach_To_7_Rut_Gon.xlsx");
+        }
+
+        function exportToCSV() {
+            const data = getExportData();
+            if(data.length === 0) return;
+            const headers = Object.keys(data[0]);
+            const csvRows = [headers.join(',')];
+            data.forEach(row => {
+                csvRows.push(headers.map(h => '"' + (row[h] !== null ? String(row[h]).replace(/"/g, '""') : '') + '"').join(','));
+            });
+            const blob = new Blob(["\uFEFF" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', 'Danh_Sach_To_7_Rut_Gon.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        loadConfig();
+        loadState();
+        loadIssues();
+        renderTable();
+    </script>
+</body>
+</html>
