@@ -433,7 +433,7 @@
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(getExportData()), "Du_Lieu");
             if (issues.length > 0) {
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(issues.map(i => ({
-                    "Ngày phát hiện": i.date, "Số thửa/TT": i.refId, "Mô tả": i.desc, "Trạng thái": i.status
+                    "Số giấy chứng nhận": i.date, "Họ và tên chủ sở hữu": i.refId, "Mô tả": i.desc, "Trạng thái": i.status
                 }))), "Loi_Can_Xu_Ly");
             }
             XLSX.writeFile(wb, "Danh_Sach_To_7_Rut_Gon.xlsx");
