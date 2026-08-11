@@ -346,23 +346,45 @@
             if (!SCRIPT_URL || SCRIPT_URL.includes("DÁN_LINK")) {
                 return alert("Lỗi: Quản trị viên chưa cấu hình Link API Google Sheets trong mã nguồn HTML!");
             }
-            const url = SCRIPT_URL;
             
-            const data = {
-                checkedIds: tableData.filter(r => r.checked).map(r => r.id),
-                issues: issues
-            };
-
+            const url = SCRIPT_URL;
             const statusEl = document.getElementById('syncStatus');
-            statusEl.innerText = "⏳ Đang lưu lên Google Sheets...";
+            statusEl.innerText = "⏳ Đang kiểm tra dữ liệu Cloud...";
             statusEl.className = "text-sm font-semibold text-amber-600 ml-2";
 
             try {
-                // Send as text/plain to avoid CORS preflight OPTION blocks in Apps Script
+                // Bước 1: Kéo dữ liệu trên cloud về kiểm tra số lượng
+                const checkResponse = await fetch(url);
+                const cloudData = await checkResponse.json();
+                
+                const cloudTickCount = (cloudData.checkedIds && Array.isArray(cloudData.checkedIds)) ? cloudData.checkedIds.length : 0;
+                const localTickCount = tableData.filter(r => r.checked).length;
+                
+                // Nếu dữ liệu trên cloud ĐANG NHIỀU HƠN dữ liệu dưới máy, cảnh báo ngay
+                if (cloudTickCount > localTickCount) {
+                    const confirmOverwrite = confirm(`CẢNH BÁO: Dữ liệu trên hệ thống (${cloudTickCount} mục đã tick) đang NHIỀU HƠN dữ liệu của bạn (${localTickCount} mục đã tick).
+
+Nếu bạn ấn OK, dữ liệu của bạn sẽ GHI ĐÈ và LÀM MẤT dữ liệu của người khác.
+
+Hãy ấn CANCEL (Hủy), sau đó ấn nút "Tải từ Cloud" để đồng bộ dữ liệu mới nhất trước khi làm việc.`);
+                    if (!confirmOverwrite) {
+                        statusEl.innerText = "❌ Đã hủy lưu để tránh mất dữ liệu.";
+                        statusEl.className = "text-sm font-semibold text-red-600 ml-2";
+                        return; // Ngưng tiến trình lưu
+                    }
+                }
+                
+                // Bước 2: Thực hiện lưu nếu an toàn hoặc người dùng vẫn cố tình OK
+                statusEl.innerText = "⏳ Đang lưu lên hệ thống...";
+                const payload = {
+                    checkedIds: tableData.filter(r => r.checked).map(r => r.id),
+                    issues: issues
+                };
+
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(payload)
                 });
                 
                 const result = await response.json();
@@ -375,7 +397,7 @@
                 }
             } catch(e) {
                 alert("Lỗi khi kết nối đến Google Sheets. Hãy chắc chắn Link Web App đúng và có quyền truy cập Anyone.");
-                statusEl.innerText = "❌ Lỗi lưu dữ liệu!";
+                statusEl.innerText = "❌ Lỗi kết nối!";
                 statusEl.className = "text-sm font-semibold text-red-600 ml-2";
             }
         }
@@ -457,11 +479,6 @@
         loadState();
         loadIssues();
         renderTable();
-        
-        // Tự động tải từ Cloud khi mở trang (nếu đã dán link API)
-        if (typeof SCRIPT_URL !== 'undefined' && !SCRIPT_URL.includes("DÁN_LINK")) {
-            loadFromCloud();
-        }
     </script>
 </body>
 </html>
