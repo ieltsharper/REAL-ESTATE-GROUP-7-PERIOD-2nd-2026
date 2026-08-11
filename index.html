@@ -85,10 +85,8 @@
             
             <!-- Cloud Sync Config -->
             <div class="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
-                <span class="font-bold text-blue-700">☁️ Google Sheets Sync:</span>
-                <input type="text" id="scriptUrl" placeholder="Dán link Web App URL từ Google Apps Script vào đây..." class="flex-1 px-3 py-1.5 border border-blue-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                <button onclick="saveConfig()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition-colors">Lưu Link</button>
-                <span id="syncStatus" class="text-sm font-semibold text-blue-600 ml-2"></span>
+                <span class="font-bold text-blue-700">☁️ Dữ liệu được đồng bộ trực tuyến qua hệ thống lưu trữ Cloud</span>
+                <span id="syncStatus" class="text-sm font-semibold text-blue-600 ml-4"></span>
             </div>
 
             <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
@@ -340,20 +338,15 @@
 
         
         // ------------------ CLOUD SYNC LOGIC ------------------
-        function saveConfig() {
-            const url = document.getElementById('scriptUrl').value.trim();
-            localStorage.setItem('gas_script_url', url);
-            alert("Đã lưu Link cấu hình thành công!");
-        }
-
-        function loadConfig() {
-            const url = localStorage.getItem('gas_script_url');
-            if (url) document.getElementById('scriptUrl').value = url;
-        }
+        // === DÁN LINK WEB APP CỦA GOOGLE APPS SCRIPT VÀO ĐÂY ===
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQqydI6u8Mmi56ugoAO-m_xzKsjZjUQcM2VK32CkU3hrdq3B5SOQ2rdL1yLf_giNih/exec";
+        // =======================================================
 
         async function saveToCloud() {
-            const url = document.getElementById('scriptUrl').value.trim();
-            if(!url) return alert("Vui lòng dán Link Apps Script vào ô cấu hình và bấm Lưu Link!");
+            if (!SCRIPT_URL || SCRIPT_URL.includes("DÁN_LINK")) {
+                return alert("Lỗi: Quản trị viên chưa cấu hình Link API Google Sheets trong mã nguồn HTML!");
+            }
+            const url = SCRIPT_URL;
             
             const data = {
                 checkedIds: tableData.filter(r => r.checked).map(r => r.id),
@@ -388,8 +381,10 @@
         }
 
         async function loadFromCloud() {
-            const url = document.getElementById('scriptUrl').value.trim();
-            if(!url) return alert("Vui lòng dán Link Apps Script vào ô cấu hình!");
+            if (!SCRIPT_URL || SCRIPT_URL.includes("DÁN_LINK")) {
+                return alert("Lỗi: Quản trị viên chưa cấu hình Link API Google Sheets trong mã nguồn HTML!");
+            }
+            const url = SCRIPT_URL;
 
             const statusEl = document.getElementById('syncStatus');
             statusEl.innerText = "⏳ Đang tải từ Google Sheets...";
@@ -459,7 +454,6 @@
             document.body.removeChild(link);
         }
 
-        loadConfig();
         loadState();
         loadIssues();
         renderTable();
