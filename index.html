@@ -457,6 +457,11 @@
         loadState();
         loadIssues();
         renderTable();
+        
+        // Tự động tải từ Cloud khi mở trang (nếu đã dán link API)
+        if (typeof SCRIPT_URL !== 'undefined' && !SCRIPT_URL.includes("DÁN_LINK")) {
+            loadFromCloud();
+        }
     </script>
 </body>
 </html>
